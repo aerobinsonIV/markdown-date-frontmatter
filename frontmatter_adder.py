@@ -33,19 +33,17 @@ def list_dir_recursive(path: str):
 
     return files
 
-def get_timestamps(path: str):
+def get_timestamp_objs(path: str):
     created_timestamp = pathlib.Path(path).stat().st_ctime
     updated_timestamp = pathlib.Path(path).stat().st_mtime
 
     created_dt = datetime.datetime.fromtimestamp(created_timestamp)
     updated_dt = datetime.datetime.fromtimestamp(updated_timestamp)
 
-    # return created_dt, updated_dt
+    return created_dt, updated_dt
 
-    created_formatted = created_dt.strftime("%Y-%m-%d")
-    updated_formatted = updated_dt.strftime("%Y-%m-%d")
-
-    return created_formatted, updated_formatted
+def fmt_timestamp_obj(obj) -> str:
+    return obj.strftime("%Y-%m-%d")
 
 def parse_file(path: str):
 
@@ -77,7 +75,6 @@ if __name__ == "__main__":
     if not os.path.isdir(vault_dir):
         print("This is not a dir")
         exit(-1)
-    print("--------------")
     
     files = list_dir_recursive(vault_dir)
 
@@ -86,16 +83,23 @@ if __name__ == "__main__":
     
         frontmatter_dict, body = parse_file(file)
 
-        created, updated = get_timestamps(file)
-        frontmatter_dict["updated"] = updated
+        created, updated = get_timestamp_objs(file)
+        frontmatter_dict["updated"] = fmt_timestamp_obj(updated)
         
         # If a note already has creation date info, prioritize that over file metadata
         if "created" not in frontmatter_dict.keys():
-            frontmatter_dict["created"] = created
+            frontmatter_dict["created"] = fmt_timestamp_obj(created)
         
         new_frontmatter_str = yaml.dump(frontmatter_dict)
 
+        # Write new data into file
         write_file(file, new_frontmatter_str.replace("'", ""), body)
+
+        # Overwrite date modified metadata to its original value
+        filename_formatted = file.replace("'", "''")
+        command = f"powershell -Command $newDateModified = Get-Date -Year {updated.year} -Month {updated.month} -Day {updated.day} -Hour {updated.hour} -Minute {updated.minute} -Second {updated.second}; Set-ItemProperty -Path '{filename_formatted}' -Name LastWriteTime -Value $newDateModified"
+        os.system(command)
+        print()
 
     print(f"\n{len(files)} notes total processed")
 
