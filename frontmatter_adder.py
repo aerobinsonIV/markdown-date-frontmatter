@@ -47,7 +47,7 @@ def get_timestamps(path: str):
 
     return created_formatted, updated_formatted
 
-def get_frontmatter(path: str):
+def parse_file(path: str):
 
     frontmatter_str = ""
 
@@ -58,7 +58,16 @@ def get_frontmatter(path: str):
                 frontmatter_str += line
                 line = f.readline()
 
-    return yaml.safe_load(frontmatter_str)
+        remainder = f.read()
+
+    return yaml.safe_load(frontmatter_str), remainder
+
+def write_file(path: str, frontmatter_str: str, body_str: str):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("---\n")
+        f.write(frontmatter_str)
+        f.write("---\n")
+        f.write(body_str)
 
 if __name__ == "__main__":
     # vault_dir = sys.argv[1]
@@ -77,15 +86,18 @@ if __name__ == "__main__":
 
     # print(f"\n{len(files)} notes total")
 
-    file_path = "D:\\notes\\Windows\\Add to PATH.md"
+    file_path = "D:\\temp\\Add to PATH.md"
     
-    frontmatter = get_frontmatter(file_path)
-    print(f"{frontmatter}\n")
+    frontmatter_dict, body = parse_file(file_path)
 
     created, updated = get_timestamps(file_path)
-    frontmatter["updated"] = updated
-    frontmatter["created"] = created
-    print(f"{frontmatter}\n")
+    frontmatter_dict["updated"] = updated
     
-    print(yaml.dump(frontmatter))
+    # If a note already has creation date info, prioritize that over file metadata
+    if not frontmatter_dict["created"]:
+        frontmatter_dict["created"] = created
+    
+    new_frontmatter_str = yaml.dump(frontmatter_dict)
+
+    write_file(file_path, new_frontmatter_str.replace("'", ""), body)
 
