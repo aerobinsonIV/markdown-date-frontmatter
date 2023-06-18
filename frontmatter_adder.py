@@ -59,8 +59,11 @@ def parse_file(path: str):
                 line = f.readline()
 
         remainder = f.read()
-
-    return yaml.safe_load(frontmatter_str), remainder
+    if len(frontmatter_str) == 0:
+        empty_dict = {}
+        return empty_dict, remainder
+    else:
+        return yaml.safe_load(frontmatter_str), remainder
 
 def write_file(path: str, frontmatter_str: str, body_str: str):
     with open(path, "w", encoding="utf-8") as f:
@@ -70,34 +73,29 @@ def write_file(path: str, frontmatter_str: str, body_str: str):
         f.write(body_str)
 
 if __name__ == "__main__":
-    # vault_dir = sys.argv[1]
-    # if not os.path.isdir(vault_dir):
-    #     print("This is not a dir")
-    #     exit(-1)
-    # print("--------------")
+    vault_dir = sys.argv[1]
+    if not os.path.isdir(vault_dir):
+        print("This is not a dir")
+        exit(-1)
+    print("--------------")
     
-    # files = list_dir_recursive(vault_dir)
+    files = list_dir_recursive(vault_dir)
 
-    # for file in files:
-    #     created, updated = timestamp_strs(file)
-
-    #     print(file, end="")
-    #     print(f", Frontmatter: {has_frontmatter(file)}")
-
-    # print(f"\n{len(files)} notes total")
-
-    file_path = "D:\\temp\\Add to PATH.md"
+    for file in files:
+        print(f"Processing {file}")
     
-    frontmatter_dict, body = parse_file(file_path)
+        frontmatter_dict, body = parse_file(file)
 
-    created, updated = get_timestamps(file_path)
-    frontmatter_dict["updated"] = updated
-    
-    # If a note already has creation date info, prioritize that over file metadata
-    if not frontmatter_dict["created"]:
-        frontmatter_dict["created"] = created
-    
-    new_frontmatter_str = yaml.dump(frontmatter_dict)
+        created, updated = get_timestamps(file)
+        frontmatter_dict["updated"] = updated
+        
+        # If a note already has creation date info, prioritize that over file metadata
+        if "created" not in frontmatter_dict.keys():
+            frontmatter_dict["created"] = created
+        
+        new_frontmatter_str = yaml.dump(frontmatter_dict)
 
-    write_file(file_path, new_frontmatter_str.replace("'", ""), body)
+        write_file(file, new_frontmatter_str.replace("'", ""), body)
+
+    print(f"\n{len(files)} notes total processed")
 
